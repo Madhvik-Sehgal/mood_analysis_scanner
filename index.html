@@ -3,121 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodScanner AI - Serverless Text Analysis</title>
+    <title>MoodScanner AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Space Grotesk', sans-serif; }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* Smooth transitions */
+        .transition-all { transition-duration: 0.3s; }
+        
+        /* Microphone Pulse Animation */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        .score-bar-bg { background-color: #E2E8F0; border-radius: 999px; overflow: hidden; height: 12px; }
-        .score-bar-fill { height: 100%; transition: width 1s ease-out; }
+        .mic-active {
+            animation: pulse-red 1.5s infinite;
+            background-color: #fee2e2 !important;
+            color: #ef4444 !important;
+            border-color: #ef4444 !important;
+        }
+
+        /* Custom Scrollbar for History */
+        .history-scroll::-webkit-scrollbar { width: 4px; }
+        .history-scroll::-webkit-scrollbar-track { background: transparent; }
+        .history-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 min-h-screen text-gray-800">
+<body class="text-slate-800 antialiased">
 
-    <!-- Top Nav -->
-    <nav class="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
+    <!-- Navbar -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded bg-gradient-to-tr from-cyan-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
                     <i class="fas fa-brain"></i>
                 </div>
-                <span class="text-white font-bold text-xl tracking-wide">MoodScanner<span class="text-cyan-400">AI</span></span>
+                <span class="font-bold text-xl tracking-tight text-slate-900">MoodScanner <span class="text-indigo-600">AI</span></span>
             </div>
-            <div class="text-white/50 text-xs hidden md:block">
-                AWS API Gateway Connected &bull; Serverless
+            <div class="flex items-center gap-3">
+                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold flex items-center gap-1.5 border border-green-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    System Online
+                </span>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <main class="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- Left Column: Input -->
-        <div class="space-y-6">
-            <div class="glass-panel rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-purple-500"></div>
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">Input Text</h2>
-                <p class="text-gray-500 mb-4 text-sm">Enter any paragraph, review, or email below.</p>
-                <textarea id="textInput" rows="8" 
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 outline-none transition-all resize-none text-gray-700"
-                    placeholder="Example: I absolutely love learning about Cloud Computing! It is amazing."></textarea>
-                <div class="mt-6 flex justify-between items-center">
-                    <button onclick="insertSample()" class="text-sm text-purple-600 font-medium hover:underline">Paste Sample</button>
-                    <button onclick="analyzeText()" id="analyzeBtn" class="bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
-                        <span>Analyze Sentiment</span>
-                        <i class="fas fa-bolt"></i>
+        <!-- Left Column: Input & Controls (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+            
+            <!-- Main Input Card -->
+            <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Sentiment Analysis</h1>
+                        <p class="text-slate-500 text-sm mt-1">Detect emotions in text using Serverless AI</p>
+                    </div>
+                    <button id="micBtn" onclick="toggleVoice()" class="group flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-200 hover:text-indigo-600 transition-all">
+                        <i class="fas fa-microphone group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-medium">Voice Input</span>
                     </button>
+                </div>
+
+                <div class="relative">
+                    <textarea id="textInput" rows="6" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-700 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none text-base leading-relaxed shadow-inner"
+                        placeholder="Type something here... e.g., 'I really enjoyed the workshop today, the content was fantastic!'"></textarea>
+                    
+                    <!-- Character Count (Optional enhancement) -->
+                    <div class="absolute bottom-3 right-3 text-xs text-slate-400 pointer-events-none">
+                        AI Ready
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <button onclick="insertSample()" class="text-sm text-slate-500 hover:text-indigo-600 font-medium transition-colors flex items-center gap-1">
+                        <i class="fas fa-magic"></i> Paste Sample Text
+                    </button>
+                    
+                    <button onclick="analyzeText()" id="analyzeBtn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                        <span>Analyze Text</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-clock text-slate-400"></i> Recent Activity
+                    </h3>
+                    <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-red-500 transition-colors">Clear</button>
+                </div>
+                
+                <div id="historyList" class="space-y-2 max-h-48 overflow-y-auto history-scroll pr-2">
+                    <div class="text-center py-8 border-2 border-dashed border-slate-100 rounded-xl">
+                        <p class="text-sm text-slate-400">No scans yet. Try analyzing some text!</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right Column: Results -->
-        <div class="space-y-6">
-            <div class="glass-panel rounded-2xl p-8 shadow-2xl min-h-[400px] flex flex-col justify-center relative">
-                <!-- Initial State -->
-                <div id="placeholderState" class="text-center text-gray-400">
-                    <i class="fas fa-chart-pie text-6xl mb-4 text-gray-200"></i>
-                    <p>Results will appear here...</p>
+        <!-- Right Column: Results (5 cols) -->
+        <div class="lg:col-span-5">
+            <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 md:p-8 h-full min-h-[400px] flex flex-col relative overflow-hidden">
+                
+                <!-- Background Pattern -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
+
+                <!-- Initial Placeholder -->
+                <div id="placeholderState" class="flex-grow flex flex-col items-center justify-center text-center opacity-100 transition-opacity duration-300">
+                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-chart-pie text-3xl text-slate-300"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-700">Ready to Analyze</h3>
+                    <p class="text-sm text-slate-400 max-w-xs mt-1">Your results will appear here with detailed sentiment scoring and metadata.</p>
                 </div>
+
                 <!-- Loading State -->
-                <div id="loadingState" class="hidden text-center">
-                    <div class="inline-block w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-                    <p class="text-gray-500 animate-pulse">Processing via Lambda...</p>
+                <div id="loadingState" class="hidden absolute inset-0 bg-white flex flex-col items-center justify-center z-10">
+                    <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                    <p class="text-indigo-600 font-medium animate-pulse">Processing...</p>
                 </div>
-                <!-- Active State -->
-                <div id="resultsState" class="hidden space-y-6 w-full">
-                    <div class="flex items-center justify-between border-b border-gray-100 pb-6">
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Sentiment</p>
-                            <h2 id="sentimentLabel" class="text-4xl font-black text-gray-800 mt-1">POSITIVE</h2>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Score</p>
-                            <span id="sentimentScore" class="text-4xl font-black text-purple-600">85</span><span class="text-xl text-gray-400">/100</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs font-semibold text-gray-500 mb-1">
-                            <span>Negative</span><span>Neutral</span><span>Positive</span>
-                        </div>
-                        <div class="score-bar-bg relative">
-                            <div id="scoreBar" class="score-bar-fill bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 w-0"></div>
-                            <div id="scoreMarker" class="absolute top-0 h-full w-1 bg-black transform -translate-x-1/2 transition-all duration-1000" style="left: 0%"></div>
+
+                <!-- Results Content -->
+                <div id="resultsState" class="hidden space-y-8 relative z-0">
+                    
+                    <!-- Header -->
+                    <div class="text-center">
+                        <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">Detected Sentiment</span>
+                        <div id="sentimentBadge" class="mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 font-bold text-lg border border-slate-200">
+                            <span id="sentimentIcon">🤔</span>
+                            <span id="sentimentLabel">NEUTRAL</span>
                         </div>
                     </div>
+
+                    <!-- Score Meter -->
+                    <div class="relative pt-2">
+                        <div class="flex justify-between text-xs font-semibold text-slate-400 mb-2">
+                            <span>Negative</span>
+                            <span>Score: <span id="sentimentScore" class="text-slate-800">0</span>/100</span>
+                            <span>Positive</span>
+                        </div>
+                        <div class="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                            <div id="scoreBar" class="h-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-500 w-0 transition-all duration-1000 ease-out rounded-full relative">
+                                <div class="absolute right-0 top-0 bottom-0 w-1 bg-white/50"></div>
+                            </div>
+                        </div>
+                        <!-- Marker Triangle -->
+                        <div id="scoreMarker" class="absolute top-7 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-slate-800 transform -translate-x-1/2 transition-all duration-1000" style="left: 0%"></div>
+                    </div>
+
+                    <!-- Stats Grid -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div class="text-purple-500 mb-1"><i class="fas fa-stopwatch"></i></div>
-                            <div class="text-2xl font-bold text-gray-800" id="readTime">0s</div>
-                            <div class="text-xs text-gray-400">Est. Read Time</div>
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 transition-colors">
+                            <div class="flex items-center gap-2 text-indigo-500 mb-1">
+                                <i class="fas fa-clock"></i>
+                                <span class="text-xs font-bold uppercase text-slate-400">Read Time</span>
+                            </div>
+                            <div class="text-2xl font-bold text-slate-800"><span id="readTime">0</span><span class="text-sm font-normal text-slate-500 ml-1">sec</span></div>
                         </div>
-                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div class="text-cyan-500 mb-1"><i class="fas fa-align-left"></i></div>
-                            <div class="text-2xl font-bold text-gray-800" id="wordCount">0</div>
-                            <div class="text-xs text-gray-400">Word Count</div>
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 transition-colors">
+                            <div class="flex items-center gap-2 text-blue-500 mb-1">
+                                <i class="fas fa-align-left"></i>
+                                <span class="text-xs font-bold uppercase text-slate-400">Word Count</span>
+                            </div>
+                            <div class="text-2xl font-bold text-slate-800" id="wordCount">0</div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
     </main>
 
     <script>
-        // YOUR API URL IS HARDCODED HERE FOR YOU
+        // --- CONFIGURATION ---
         const API_URL = "https://rl9ojad1b6.execute-api.ap-south-1.amazonaws.com/dev/scan";
 
-        function insertSample() {
-            document.getElementById('textInput').value = "I am absolutely thrilled with this project! It works perfectly and the design is beautiful.";
+        // --- HISTORY LOGIC ---
+        window.onload = function() { renderHistory(); };
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('moodHistory') || '[]');
+            const list = document.getElementById('historyList');
+            
+            if(history.length === 0) {
+                list.innerHTML = `
+                <div class="text-center py-8 border-2 border-dashed border-slate-100 rounded-xl">
+                    <p class="text-sm text-slate-400">No scans yet. Try analyzing some text!</p>
+                </div>`;
+                return;
+            }
+
+            let html = '';
+            history.forEach(item => {
+                let badgeClass = 'bg-slate-100 text-slate-600';
+                if(item.label === 'Positive') badgeClass = 'bg-green-100 text-green-700 border-green-200';
+                if(item.label === 'Negative') badgeClass = 'bg-red-100 text-red-700 border-red-200';
+                if(item.label === 'Neutral') badgeClass = 'bg-yellow-100 text-yellow-700 border-yellow-200';
+                
+                html += `
+                <div class="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors group cursor-default">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-1 h-8 rounded-full ${item.label === 'Positive' ? 'bg-green-400' : item.label === 'Negative' ? 'bg-red-400' : 'bg-yellow-400'}"></div>
+                        <span class="text-sm text-slate-600 truncate font-medium max-w-[150px]">"${item.text.substring(0, 20)}${item.text.length > 20 ? '...' : ''}"</span>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded border ${badgeClass} font-semibold">${item.score}%</span>
+                </div>`;
+            });
+            list.innerHTML = html;
         }
 
+        function addToHistory(text, label, score) {
+            let history = JSON.parse(localStorage.getItem('moodHistory') || '[]');
+            history.unshift({ text, label, score });
+            if(history.length > 5) history.pop();
+            localStorage.setItem('moodHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('moodHistory');
+            renderHistory();
+        }
+
+        // --- VOICE LOGIC ---
+        let recognition;
+        
+        function toggleVoice() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert("Voice input is only supported in Chrome or Edge browsers.");
+                return;
+            }
+
+            const btn = document.getElementById('micBtn');
+            const icon = btn.querySelector('i');
+            const textSpan = btn.querySelector('span');
+
+            if (recognition && recognition.started) {
+                recognition.stop();
+                return;
+            }
+
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                recognition.started = true;
+                btn.classList.add('mic-active');
+                textSpan.innerText = "Listening...";
+                icon.className = "fas fa-spinner fa-spin";
+            };
+
+            recognition.onend = function() {
+                recognition.started = false;
+                btn.classList.remove('mic-active');
+                textSpan.innerText = "Voice Input";
+                icon.className = "fas fa-microphone";
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('textInput').value = transcript;
+                analyzeText();
+            };
+
+            recognition.start();
+        }
+
+        function insertSample() {
+            document.getElementById('textInput').value = "I tried the new update and it is absolutely amazing. The speed is excellent.";
+        }
+
+        // --- API LOGIC ---
         async function analyzeText() {
             const text = document.getElementById('textInput').value;
-            if(!text) return alert("Please enter some text!");
+            if(!text) return;
 
             const btn = document.getElementById('analyzeBtn');
             const placeholder = document.getElementById('placeholderState');
@@ -126,7 +296,7 @@
 
             // UI Loading
             btn.disabled = true;
-            btn.classList.add('opacity-50');
+            btn.classList.add('opacity-75', 'cursor-wait');
             placeholder.classList.add('hidden');
             results.classList.add('hidden');
             loader.classList.remove('hidden');
@@ -138,46 +308,59 @@
                     body: JSON.stringify({ text: text })
                 });
                 
-                if(!response.ok) throw new Error("API Error: " + response.statusText);
+                if(!response.ok) throw new Error("API Error");
                 let data = await response.json();
                 
-                // Handle double-stringified body (common in Lambda)
                 if (data.body && typeof data.body === 'string') {
                     data = JSON.parse(data.body);
                 }
 
-                // Render Results
                 const analysis = data.analysis;
+                
+                // Update UI Elements
                 document.getElementById('sentimentLabel').innerText = analysis.label.toUpperCase();
                 document.getElementById('sentimentScore').innerText = analysis.score;
-                document.getElementById('readTime').innerText = analysis.reading_time_sec + "s";
+                document.getElementById('readTime').innerText = analysis.reading_time_sec;
                 document.getElementById('wordCount').innerText = analysis.word_count;
                 
-                // Color Logic
-                const label = document.getElementById('sentimentLabel');
-                if(analysis.label === 'Positive') label.className = "text-4xl font-black text-green-500 mt-1";
-                else if(analysis.label === 'Negative') label.className = "text-4xl font-black text-red-500 mt-1";
-                else label.className = "text-4xl font-black text-yellow-500 mt-1";
+                // Color & Icon Logic
+                const badge = document.getElementById('sentimentBadge');
+                const icon = document.getElementById('sentimentIcon');
+                
+                badge.className = "mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-lg border transition-all";
+                
+                if(analysis.label === 'Positive') {
+                    badge.classList.add('bg-green-100', 'text-green-700', 'border-green-200');
+                    icon.innerText = "😃";
+                } else if(analysis.label === 'Negative') {
+                    badge.classList.add('bg-red-100', 'text-red-700', 'border-red-200');
+                    icon.innerText = "😠";
+                } else {
+                    badge.classList.add('bg-yellow-100', 'text-yellow-700', 'border-yellow-200');
+                    icon.innerText = "😐";
+                }
 
-                // Bar Logic
+                // Bar Animation
                 setTimeout(() => {
+                    // Fix bar width to actual percentage
                     document.getElementById('scoreBar').style.width = '100%';
+                    // Move marker to correct position
                     document.getElementById('scoreMarker').style.left = analysis.score + '%';
                 }, 100);
+
+                addToHistory(text, analysis.label, analysis.score);
 
                 loader.classList.add('hidden');
                 results.classList.remove('hidden');
 
             } catch (error) {
                 console.error(error);
-                loader.innerHTML = `<div class="text-red-500 font-bold p-4 bg-red-50 rounded-lg">
-                    <i class="fas fa-exclamation-triangle mb-2 text-2xl"></i><br>
-                    Connection Failed<br>
-                    <span class="text-xs font-normal text-gray-600">Did you enable CORS in AWS?</span>
-                </div>`;
+                loader.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                placeholder.innerHTML = `<p class="text-red-500 font-bold">Connection Failed. Check API URL.</p>`;
             } finally {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50');
+                btn.classList.remove('opacity-75', 'cursor-wait');
             }
         }
     </script>

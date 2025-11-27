@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodScanner AI - Serverless Text Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Space Grotesk', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .score-bar-bg { background-color: #E2E8F0; border-radius: 999px; overflow: hidden; height: 12px; }
+        .score-bar-fill { height: 100%; transition: width 1s ease-out; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 min-h-screen text-gray-800">
+
+    <!-- Top Nav -->
+    <nav class="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-gradient-to-tr from-cyan-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <span class="text-white font-bold text-xl tracking-wide">MoodScanner<span class="text-cyan-400">AI</span></span>
+            </div>
+            <div class="text-white/50 text-xs hidden md:block">
+                AWS API Gateway Connected &bull; Serverless
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Left Column: Input -->
+        <div class="space-y-6">
+            <div class="glass-panel rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-purple-500"></div>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Input Text</h2>
+                <p class="text-gray-500 mb-4 text-sm">Enter any paragraph, review, or email below.</p>
+                <textarea id="textInput" rows="8" 
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 outline-none transition-all resize-none text-gray-700"
+                    placeholder="Example: I absolutely love learning about Cloud Computing! It is amazing."></textarea>
+                <div class="mt-6 flex justify-between items-center">
+                    <button onclick="insertSample()" class="text-sm text-purple-600 font-medium hover:underline">Paste Sample</button>
+                    <button onclick="analyzeText()" id="analyzeBtn" class="bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
+                        <span>Analyze Sentiment</span>
+                        <i class="fas fa-bolt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Results -->
+        <div class="space-y-6">
+            <div class="glass-panel rounded-2xl p-8 shadow-2xl min-h-[400px] flex flex-col justify-center relative">
+                <!-- Initial State -->
+                <div id="placeholderState" class="text-center text-gray-400">
+                    <i class="fas fa-chart-pie text-6xl mb-4 text-gray-200"></i>
+                    <p>Results will appear here...</p>
+                </div>
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden text-center">
+                    <div class="inline-block w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                    <p class="text-gray-500 animate-pulse">Processing via Lambda...</p>
+                </div>
+                <!-- Active State -->
+                <div id="resultsState" class="hidden space-y-6 w-full">
+                    <div class="flex items-center justify-between border-b border-gray-100 pb-6">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Sentiment</p>
+                            <h2 id="sentimentLabel" class="text-4xl font-black text-gray-800 mt-1">POSITIVE</h2>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Score</p>
+                            <span id="sentimentScore" class="text-4xl font-black text-purple-600">85</span><span class="text-xl text-gray-400">/100</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-gray-500 mb-1">
+                            <span>Negative</span><span>Neutral</span><span>Positive</span>
+                        </div>
+                        <div class="score-bar-bg relative">
+                            <div id="scoreBar" class="score-bar-fill bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 w-0"></div>
+                            <div id="scoreMarker" class="absolute top-0 h-full w-1 bg-black transform -translate-x-1/2 transition-all duration-1000" style="left: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div class="text-purple-500 mb-1"><i class="fas fa-stopwatch"></i></div>
+                            <div class="text-2xl font-bold text-gray-800" id="readTime">0s</div>
+                            <div class="text-xs text-gray-400">Est. Read Time</div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div class="text-cyan-500 mb-1"><i class="fas fa-align-left"></i></div>
+                            <div class="text-2xl font-bold text-gray-800" id="wordCount">0</div>
+                            <div class="text-xs text-gray-400">Word Count</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // YOUR API URL IS HARDCODED HERE FOR YOU
+        const API_URL = "https://rl9ojad1b6.execute-api.ap-south-1.amazonaws.com/dev/scan";
+
+        function insertSample() {
+            document.getElementById('textInput').value = "I am absolutely thrilled with this project! It works perfectly and the design is beautiful.";
+        }
+
+        async function analyzeText() {
+            const text = document.getElementById('textInput').value;
+            if(!text) return alert("Please enter some text!");
+
+            const btn = document.getElementById('analyzeBtn');
+            const placeholder = document.getElementById('placeholderState');
+            const loader = document.getElementById('loadingState');
+            const results = document.getElementById('resultsState');
+
+            // UI Loading
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            placeholder.classList.add('hidden');
+            results.classList.add('hidden');
+            loader.classList.remove('hidden');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if(!response.ok) throw new Error("API Error: " + response.statusText);
+                let data = await response.json();
+                
+                // Handle double-stringified body (common in Lambda)
+                if (data.body && typeof data.body === 'string') {
+                    data = JSON.parse(data.body);
+                }
+
+                // Render Results
+                const analysis = data.analysis;
+                document.getElementById('sentimentLabel').innerText = analysis.label.toUpperCase();
+                document.getElementById('sentimentScore').innerText = analysis.score;
+                document.getElementById('readTime').innerText = analysis.reading_time_sec + "s";
+                document.getElementById('wordCount').innerText = analysis.word_count;
+                
+                // Color Logic
+                const label = document.getElementById('sentimentLabel');
+                if(analysis.label === 'Positive') label.className = "text-4xl font-black text-green-500 mt-1";
+                else if(analysis.label === 'Negative') label.className = "text-4xl font-black text-red-500 mt-1";
+                else label.className = "text-4xl font-black text-yellow-500 mt-1";
+
+                // Bar Logic
+                setTimeout(() => {
+                    document.getElementById('scoreBar').style.width = '100%';
+                    document.getElementById('scoreMarker').style.left = analysis.score + '%';
+                }, 100);
+
+                loader.classList.add('hidden');
+                results.classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                loader.innerHTML = `<div class="text-red-500 font-bold p-4 bg-red-50 rounded-lg">
+                    <i class="fas fa-exclamation-triangle mb-2 text-2xl"></i><br>
+                    Connection Failed<br>
+                    <span class="text-xs font-normal text-gray-600">Did you enable CORS in AWS?</span>
+                </div>`;
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+    </script>
+</body>
+</html>
